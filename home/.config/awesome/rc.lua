@@ -39,11 +39,12 @@ end
 
 -- {{{ Variable definitions
 -- Themes define colours, icons, and wallpapers
-beautiful.init("/usr/share/awesome/themes/default/theme.lua")
+beautiful.init(os.getenv("HOME") .. "/.config/awesome/theme.lua")
 
 -- This is used later as the default terminal and editor to run.
-terminal = "x-terminal-emulator"
-browser = "google-chrome"
+terminal = "x-terminal-emulator -e " .. os.getenv("HOME") .. "/bin/tmx"
+remote_terminal = "x-terminal-emulator -hold -e /bin/zsh -c \"ssh highwind.sea -t '~/bin/tmx'\""
+browser = "x-www-browser"
 lock = "xscreensaver-command -lock"
 editor = os.getenv("EDITOR") or "editor"
 editor_cmd = terminal .. " -e " .. editor
@@ -94,6 +95,7 @@ myawesomemenu = {
 mymainmenu = awful.menu({ items = { { "awesome", myawesomemenu, beautiful.awesome_icon },
                                     { "Debian", debian.menu.Debian_menu.Debian },
                                     { "open terminal", terminal },
+                                    { "open remote terminal", remote_terminal },
                                     { "open browser", browser }
                                   }
                         })
@@ -235,6 +237,7 @@ globalkeys = awful.util.table.join(
 
     -- Standard program
     awful.key({ modkey,           }, "Return", function () awful.util.spawn(terminal) end),
+    awful.key({ modkey,           }, "\\", function () awful.util.spawn(remote_terminal) end),
     awful.key({ modkey, "Shift"   }, "Return", function () awful.util.spawn(browser) end),
     awful.key({ modkey,           }, "z", function () awful.util.spawn(lock) end),
     awful.key({ modkey, "Control" }, "r", awesome.restart),
@@ -253,11 +256,11 @@ globalkeys = awful.util.table.join(
 
 		-- Volume
     awful.key({ }, "XF86AudioRaiseVolume", function ()
-			awful.util.pread("amixer -D pulse set Master 9%+")
+			awful.util.pread("amixer -D pulse set Master 1%+")
 			update_volume(volume_widget)
 		end),
     awful.key({ }, "XF86AudioLowerVolume", function ()
-			awful.util.pread("amixer -D pulse set Master 9%-")
+			awful.util.pread("amixer -D pulse set Master 1%-")
 			update_volume(volume_widget)
 		end),
     awful.key({ }, "XF86AudioMute", function ()
@@ -402,15 +405,17 @@ client.add_signal("focus", function(c) c.border_color = beautiful.border_focus e
 client.add_signal("unfocus", function(c) c.border_color = beautiful.border_normal end)
 -- }}}
 
-function run_once(cmd)
-  findme = cmd
-  firstspace = cmd:find(" ")
-  if firstspace then
-    findme = cmd:sub(0, firstspace-1)
-  end
-  awful.util.spawn_with_shell("pgrep -u $USER -x " .. findme .. " > /dev/null || (" .. cmd .. ")")
+function run_once_with_prefix(prefix, cmd)
+  awful.util.spawn_with_shell("pgrep -u $USER -f -x '" .. prefix .. cmd .. "' > /dev/null || (" .. cmd .. ")")
 end
 
-run_once("fdpowermon")
+function run_once(cmd)
+  run_once_with_prefix("", cmd)
+end
+
+run_once("xscreensaver -no-splash")
+run_once_with_prefix("/usr/bin/perl ", "/usr/bin/fdpowermon")
 run_once("nm-applet")
 run_once("synclient TouchpadOff=1")
+run_once("setxkbmap us,il altgr-intl,phonetic -option 'grp:caps_toggle'")
+run_once("xcompmgr")
